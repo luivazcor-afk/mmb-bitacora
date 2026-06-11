@@ -4458,7 +4458,8 @@ function renderCatServicios() {
 function toggleFleteSectionAC() {
   const tipo = (document.getElementById('v-tipo').value || '').toLowerCase();
   const sec  = document.getElementById('flete-section');
-  const FLETES = ['flete full','flete sencillo','traslado','flete_full','flete_sencillo'];
+  const FLETES = ['flete full','flete sencillo','flete terrestre','traslado',
+    'flete_full','flete_sencillo','flete_terrestre','flete full','full'];
   if (FLETES.some(f => tipo.includes(f))) sec.classList.add('show');
   else sec.classList.remove('show');
 }
