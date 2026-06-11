@@ -1760,18 +1760,9 @@ const SCRIPT_URL_BASE = 'https://script.google.com/macros/s/AKfycbzPE1X9nkoobLCN
 // ── CONFIGURACIÓN MULTI-EMPRESA ───────────────────────
 // Cada empresa tiene su propio SHEET_ID en localStorage
 // El SCRIPT_URL incluye el sheetId como parámetro
-function getConfig() {
-  try {
-    return JSON.parse(localStorage.getItem('vazse_config') || 'null');
-  } catch(e) { return null; }
-}
-function saveConfig(cfg) {
-  localStorage.setItem('vazse_config', JSON.stringify(cfg));
-}
-function getSheetId() {
-  const cfg = getConfig();
-  return cfg ? cfg.sheetId : '';
-}
+function getConfig() { return {empresa:'MMB LOGISTICS', sheetId:'1pzNFkbAFDQ0MifP8uYGfif8eDNkBYT0ZxGJMQZXrWtQ'}; }
+function saveConfig(cfg) { /* MMB fixed */ }
+function getSheetId() { return '1pzNFkbAFDQ0MifP8uYGfif8eDNkBYT0ZxGJMQZXrWtQ'; }
 function getEmpresaNombre() {
   const cfg = getConfig();
   return 'MMB LOGISTICS';
@@ -1885,7 +1876,7 @@ function sendPostJsonp(payload) {
   return new Promise((resolve) => {
     const cbName = '_vazse_cb_' + Date.now() + '_' + Math.floor(Math.random()*9999);
     const encoded = encodeURIComponent(JSON.stringify(payload));
-    const url = SCRIPT_URL + '?action=write&data=' + encoded + '&cb=' + cbName;
+    const url = SCRIPT_URL_BASE + '?action=write&data=' + encoded + '&sheetId=' + getSheetId() + '&cb=' + cbName;
     window[cbName] = function(resp) {
       delete window[cbName];
       if (script.parentNode) script.parentNode.removeChild(script);
@@ -2194,8 +2185,7 @@ async function cargar() {
 
   try {
     const mesParam = (cargandoTodo || !mesCargado) ? '' : ('&mes=' + mesCargado);
-    const sid = getSheetId(); const sidParam = sid ? '&sheetId='+sid : '';
-    const res = await fetch(SCRIPT_URL_BASE + '?v=1' + mesParam + sidParam);
+    const res = await fetch(SCRIPT_URL_BASE + '?v=1' + mesParam + '&sheetId=' + getSheetId());
     const data = await res.json();
 
     viajes = (data.registros || []).map((r, i) => ({
