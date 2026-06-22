@@ -759,7 +759,7 @@ tbody td{padding:9px 12px;vertical-align:middle}
           <button onclick="navMes(1)" style="border:none;background:none;cursor:pointer;font-size:15px;line-height:1;padding:0 4px;color:#1a1a18">›</button>
         </div>
         <button class="btn" onclick="cargarTodo()" style="font-size:11px" title="Ver todos los registros">📂 Todo</button>
-        <button class="btn btn-primary" onclick="cargar()">↻ Sincronizar</button>
+        <button class="btn btn-primary" onclick="cargar()">↻ Recargar</button>
         <button class="btn" id="btn-export-v" onclick="exportarViajes()" disabled>↓ Excel</button>
         <button class="btn" id="btn-pdf-v" onclick="exportarPDFViajes()" disabled>🖨️ PDF</button>
       </div>
@@ -917,7 +917,7 @@ tbody td{padding:9px 12px;vertical-align:middle}
         </div>
       </div>
       <div class="btns">
-        <button class="btn btn-primary" onclick="cargar()">↻ Sincronizar</button>
+        <button class="btn btn-primary" onclick="cargar()">↻ Recargar</button>
         <button class="btn" id="btn-export-c" onclick="exportarCobranza()" disabled>↓ Excel</button>
       </div>
     </div>
@@ -1299,7 +1299,7 @@ tbody td{padding:9px 12px;vertical-align:middle}
         <div><div class="brand-title">Control de pagos a proveedores</div></div>
       </div>
       <div class="btns">
-        <button class="btn btn-primary" onclick="cargar()">↻ Sincronizar</button>
+        <button class="btn btn-primary" onclick="cargar()">↻ Recargar</button>
         <button class="btn" onclick="exportarProveedores()">↓ Excel</button>
       </div>
     </div>
@@ -1413,7 +1413,7 @@ tbody td{padding:9px 12px;vertical-align:middle}
         <div><div class="brand-title">Catálogos</div></div>
       </div>
       <div class="btns">
-        <button class="btn btn-primary" onclick="cargar()">↻ Sincronizar</button>
+        <button class="btn btn-primary" onclick="cargar()">↻ Recargar</button>
       </div>
     </div>
 
@@ -2285,100 +2285,66 @@ function cargarCache() {
 }
 
 async function cargar() {
-  setStatus('v', 'loading', 'Sincronizando...');
-  setStatus('c', 'loading', 'Sincronizando...');
+  setStatus('v', 'loading', 'Cargando...');
+  setStatus('c', 'loading', 'Cargando...');
 
-  if (!estaOnline()) {
-    // Load from cache
-    const cached = cargarCache();
-    if (cached) {
-      viajes = (cached.registros || []).map((r, i) => ({
-        ...r, id: i,
-        costo: parseFloat(r.costo) || 0,
-        cobrado: parseFloat(r.cobrado) || 0
-      }));
-      cobranzas = (cached.cobranzas || []).map((r, i) => ({
-        ...r, id: i,
-        monto: parseFloat(r.monto) || 0
-      }));
+  // ── Prioridad 1: carpeta local conectada ──────────────
+  if (dirHandle) {
+    try {
+      await _cargarDesdeCarpeta();
       filtrarViajes(); actualizarGraficaV();
       filtrarCobranza();
-      setStatus('v', 'err', 'Modo offline — datos en caché');
-      setStatus('c', 'err', 'Modo offline — datos en caché');
+      filtrarPagos();
+      renderCatClientes(); renderCatProveedores(); renderCatServicios();
+      setStatus('v', 'ok', '📁 Datos desde carpeta local');
+      setStatus('c', 'ok', '📁 Datos desde carpeta local');
       verificarVencidos();
       actualizarEstadoOffline();
-      toast('Sin conexión — mostrando datos guardados', 'inf');
-    } else {
-      setStatus('v', 'err', 'Sin conexión y sin caché');
-      setStatus('c', 'err', 'Sin conexión y sin caché');
-      toast('Sin conexión y sin datos en caché', 'err');
+      toast('Datos cargados ✓', 'ok');
+    } catch(e) {
+      console.error('Error cargando carpeta:', e);
+      setStatus('v', 'err', 'Error al leer carpeta local');
+      setStatus('c', 'err', 'Error al leer carpeta local');
+      toast('Error al leer carpeta local', 'err');
     }
     return;
   }
 
-  try {
-    const mesParam = (cargandoTodo || !mesCargado) ? '' : ('&mes=' + mesCargado);
-    const res = await fetch(SCRIPT_URL_BASE + '?v=1' + mesParam + '&sheetId=' + getSheetId());
-    const data = await res.json();
-
-    viajes = (data.registros || []).map((r, i) => ({
+  // ── Prioridad 2: caché en localStorage ───────────────
+  const cached = cargarCache();
+  if (cached) {
+    viajes = (cached.viajes || cached.registros || []).map((r, i) => ({
       ...r, id: i,
       costo: parseFloat(r.costo) || 0,
       cobrado: parseFloat(r.cobrado) || 0
     }));
-
-    cobranzas = (data.cobranzas || []).map((r, i) => ({
+    cobranzas = (cached.cobranzas || []).map((r, i) => ({
       ...r, id: i,
       monto: parseFloat(r.monto) || 0
     }));
-
-    pagos = (data.pagos || []).map((r, i) => ({
+    pagos = (cached.pagos || []).map((r, i) => ({
       ...r, id: i,
       monto: parseFloat(r.monto) || 0
     }));
-
-    // Save to cache
-    guardarCache(data);
-    cargarCatalogos(data);
-
+    if (Array.isArray(cached.catClientes))    catClientes    = cached.catClientes;
+    if (Array.isArray(cached.catProveedores)) catProveedores = cached.catProveedores;
+    if (Array.isArray(cached.catServicios))   catServicios   = cached.catServicios;
     filtrarViajes(); actualizarGraficaV();
     filtrarCobranza();
     filtrarPagos();
-    setStatus('v', 'ok', 'Conectado a Google Sheets');
-    setStatus('c', 'ok', 'Conectado a Google Sheets');
+    renderCatClientes(); renderCatProveedores(); renderCatServicios();
+    setStatus('v', 'inf', 'Datos en caché — conecta una carpeta 📁');
+    setStatus('c', 'inf', 'Datos en caché — conecta una carpeta 📁');
     verificarVencidos();
     actualizarEstadoOffline();
-
-    const cola = getCola();
-    if (cola.length > 0) {
-      toast('Hay ' + cola.length + ' cambio(s) pendiente(s) de sincronizar', 'inf');
-    } else {
-      toast('Datos sincronizados', 'ok');
-    }
-  } catch(e) {
-    // Try cache on error
-    const cached = cargarCache();
-    if (cached) {
-      viajes = (cached.registros || []).map((r, i) => ({
-        ...r, id: i,
-        costo: parseFloat(r.costo) || 0,
-        cobrado: parseFloat(r.cobrado) || 0
-      }));
-      cobranzas = (cached.cobranzas || []).map((r, i) => ({
-        ...r, id: i,
-        monto: parseFloat(r.monto) || 0
-      }));
-      filtrarViajes(); actualizarGraficaV();
-      filtrarCobranza();
-      setStatus('v', 'err', 'Error — mostrando caché');
-      setStatus('c', 'err', 'Error — mostrando caché');
-      toast('Error de conexión — mostrando datos guardados', 'inf');
-    } else {
-      setStatus('v', 'err', 'Error de conexión');
-      setStatus('c', 'err', 'Error de conexión');
-      toast('No se pudo conectar', 'err');
-    }
+    toast('Datos desde caché local', 'inf');
+    return;
   }
+
+  // ── Sin datos ─────────────────────────────────────────
+  setStatus('v', 'err', 'Sin datos — conecta una carpeta 📁');
+  setStatus('c', 'err', 'Sin datos — conecta una carpeta 📁');
+  toast('Conecta una 📁 Carpeta local para comenzar', 'inf');
 }
 
 // ══════════════════════════════════════════════════════
