@@ -532,10 +532,8 @@ tbody td{padding:9px 12px;vertical-align:middle}
 
 
 /* ══ MMB LOGISTICS THEME ══════════════════════════ */
-.btn-primary { background: #CC0000 !important; border-color: #CC0000 !important; }
-.btn-primary:hover { background: #A00000 !important; }
-.btn-add { background: #CC0000 !important; border-color: #CC0000 !important; color: #fff !important; }
-.btn-add:hover { background: #A00000 !important; }
+.btn-add { background: #CC0000; border-color: #CC0000; color: #fff; }
+.btn-add:hover { background: #A00000; }
 .app { border-top: 3px solid #CC0000; }
 
 
@@ -2159,7 +2157,7 @@ document.getElementById('v-fecha').addEventListener('change', function() {
 document.getElementById('v-referencia').value = generarFolioAuto();
 
 // ── TABS ──────────────────────────────────────────────
-const _TODOS_PANELES = ['viajes','cobranza','reportes','contenedores','historial','proveedores','catalogos'];
+const _TODOS_PANELES = ['viajes','cobranza','reportes','contenedores','historial','proveedores','catalogos','carta'];
 
 function cambiarTab(id, btn) {
   if (id === 'carta') { setTimeout(_poblarSelectsCarta, 50); _renderCartasLista(); }
