@@ -538,6 +538,36 @@ tbody td{padding:9px 12px;vertical-align:middle}
   margin-top:8px;display:none}
 .login-error.show{display:block}
 
+
+/* ══ CARPETA LOCAL ═══════════════════════════════════════ */
+#btn-carpeta{padding:6px 12px;font-size:12px;font-weight:500;border:1px solid #b0bec5;border-radius:8px;background:#f5f5f3;color:#444;cursor:pointer;transition:all .15s}
+#btn-carpeta:hover{background:#e3f2fd;border-color:#90caf9}
+#fs-status{font-size:11px;color:#888;margin-top:3px}
+
+/* ══ CARTA INSTRUCCIONES ══════════════════════════════════ */
+#carta-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center}
+#carta-overlay.show{display:flex}
+.carta-modal{background:#fff;border-radius:14px;width:min(700px,96vw);max-height:90vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.25)}
+.carta-header{background:#185FA5;color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.carta-header h2{font-size:13px;font-weight:600;margin:0}
+.carta-close{background:rgba(255,255,255,.15);border:none;color:#fff;width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center}
+.carta-close:hover{background:rgba(255,255,255,.3)}
+.carta-body{padding:1.25rem;overflow-y:auto;flex:1}
+.carta-section{margin-bottom:1.25rem}
+.carta-section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#185FA5;border-bottom:1px solid #dbe8f5;padding-bottom:6px;margin-bottom:10px}
+.carta-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.carta-grid.full{grid-template-columns:1fr}
+.carta-field label{display:block;font-size:10px;font-weight:600;color:#666;margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em}
+.carta-field input,.carta-field select,.carta-field textarea{width:100%;padding:7px 10px;font-size:12.5px;border:1px solid #ddd;border-radius:7px;background:#fafafa;color:#1a1a18;font-family:inherit;outline:none}
+.carta-field input:focus,.carta-field select:focus,.carta-field textarea:focus{border-color:#185FA5;background:#fff}
+.carta-field textarea{resize:vertical;min-height:56px}
+.carta-footer{padding:12px 20px;border-top:1px solid #eee;display:flex;justify-content:flex-end;gap:8px;flex-shrink:0}
+
+/* ══ PRINT carta ═══════════════════════════════════════════ */
+@media print{
+  .carta-modal,.carta-header,.carta-close,.carta-footer{display:none!important}
+}
+
 </style>
 <!-- OAuth2 implicit flow — no external library needed -->
 </head>
@@ -600,9 +630,15 @@ tbody td{padding:9px 12px;vertical-align:middle}
     <img src="https://luivazcor-afk.github.io/mmb-bitacora/MMB_LOGO.png" alt="VAZSE"
       onerror="this.style.display='none';document.getElementById('logo-txt').style.display='block'">
     <span id="logo-txt" style="display:none;font-size:18px;font-weight:500;color:#185FA5">MMB</span>
+    <div style="display:flex;align-items:center;gap:12px">
+    <div style="text-align:right">
+      <button id="btn-carpeta" onclick="seleccionarCarpeta()" title="Conectar carpeta local para guardar datos">📁 Carpeta local</button>
+      <div id="fs-status"></div>
+    </div>
     <div class="membrete-right">
       <div class="membrete-title">MMB Logistics</div>
       <div class="membrete-sub">MMB Logistics — Control operativo</div>
+    </div>
     </div>
   </div>
 
@@ -651,6 +687,9 @@ tbody td{padding:9px 12px;vertical-align:middle}
     </button>
     <button class="tab" onclick="cambiarTab('catalogos',this)">
       <span class="tab-icon">📑</span> Catálogos
+    </button>
+    <button class="tab" onclick="cambiarTab('carta',this)">
+      <span class="tab-icon">📄</span> Carta
     </button>
   </div>
 
@@ -2078,6 +2117,7 @@ document.getElementById('v-referencia').value = generarFolioAuto();
 const _TODOS_PANELES = ['viajes','cobranza','reportes','contenedores','historial','proveedores','catalogos'];
 
 function cambiarTab(id, btn) {
+  if (id === 'carta') { setTimeout(_poblarSelectsCarta, 50); _renderCartasLista(); }
   // Ocultar todos los paneles explícitamente por ID
   _TODOS_PANELES.forEach(function(pid) {
     var p = document.getElementById('panel-' + pid);
@@ -5396,6 +5436,526 @@ renderCatProveedores();
 renderCatServicios();
 actualizarEstadoOffline();
 mostrarEstadoConexion();
+
+
+// ════════════════════════════════════════════════════════
+// FILE SYSTEM ACCESS API — Carpeta local
+// ════════════════════════════════════════════════════════
+let dirHandle = null;
+const MMB_DB = 'mmb_fs_v1';
+
+async function seleccionarCarpeta() {
+  if (!('showDirectoryPicker' in window)) {
+    alert('Tu navegador no soporta la API de carpeta local. Usa Chrome o Edge.');
+    return;
+  }
+  try {
+    dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+    await _guardarHandleDB(dirHandle);
+    await _cargarDesdeCarpeta();
+    _actualizarBtnCarpeta();
+    mostrarToastMMB('📁 Carpeta conectada: ' + dirHandle.name);
+  } catch(e) {
+    if (e.name !== 'AbortError') console.error('seleccionarCarpeta:', e);
+  }
+}
+
+async function _guardarHandleDB(handle) {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open(MMB_DB, 1);
+    r.onupgradeneeded = e => e.target.result.createObjectStore('handles');
+    r.onsuccess = e => {
+      const tx = e.target.result.transaction('handles', 'readwrite');
+      tx.objectStore('handles').put(handle, 'dir');
+      tx.oncomplete = res; tx.onerror = rej;
+    };
+    r.onerror = rej;
+  });
+}
+
+async function _leerHandleDB() {
+  return new Promise((res) => {
+    const r = indexedDB.open(MMB_DB, 1);
+    r.onupgradeneeded = e => e.target.result.createObjectStore('handles');
+    r.onsuccess = e => {
+      const tx = e.target.result.transaction('handles', 'readonly');
+      const req = tx.objectStore('handles').get('dir');
+      req.onsuccess = () => res(req.result || null);
+      req.onerror   = () => res(null);
+    };
+    r.onerror = () => res(null);
+  });
+}
+
+async function _iniciarFS() {
+  const handle = await _leerHandleDB();
+  if (!handle) return;
+  try {
+    const perm = await handle.queryPermission({ mode: 'readwrite' });
+    if (perm === 'granted') {
+      dirHandle = handle;
+      await _cargarDesdeCarpeta();
+      _actualizarBtnCarpeta();
+    } else {
+      const btn = document.getElementById('btn-carpeta');
+      if (btn) {
+        btn.textContent = '📁 Re-conectar carpeta';
+        btn.style.borderColor = '#ef9a9a';
+        btn.style.background = '#fff3f3';
+        btn.onclick = async () => {
+          const p = await handle.requestPermission({ mode: 'readwrite' });
+          if (p === 'granted') { dirHandle = handle; await _cargarDesdeCarpeta(); _actualizarBtnCarpeta(); }
+          else seleccionarCarpeta();
+        };
+      }
+    }
+  } catch(e) { /* handle inválido, ignorar */ }
+}
+
+async function _guardarEnCarpeta() {
+  if (!dirHandle) return;
+  const data = {
+    version: 2,
+    savedAt: new Date().toISOString(),
+    viajes:        typeof viajes        !== 'undefined' ? viajes        : [],
+    cobranzas:     typeof cobranzas     !== 'undefined' ? cobranzas     : [],
+    pagos:         typeof pagos         !== 'undefined' ? pagos         : [],
+    catClientes:   typeof catClientes   !== 'undefined' ? catClientes   : [],
+    catProveedores:typeof catProveedores!== 'undefined' ? catProveedores: [],
+    catServicios:  typeof catServicios  !== 'undefined' ? catServicios  : [],
+  };
+  try {
+    const fh = await dirHandle.getFileHandle('data.json', { create: true });
+    const w  = await fh.createWritable();
+    await w.write(JSON.stringify(data, null, 2));
+    await w.close();
+    const st = document.getElementById('fs-status');
+    if (st) st.textContent = 'Guardado ' + new Date().toLocaleTimeString('es-MX');
+  } catch(e) { console.error('_guardarEnCarpeta:', e); }
+}
+
+async function _cargarDesdeCarpeta() {
+  if (!dirHandle) return;
+  try {
+    const fh   = await dirHandle.getFileHandle('data.json');
+    const file = await fh.getFile();
+    const data = JSON.parse(await file.text());
+    if (Array.isArray(data.viajes))         viajes         = data.viajes;
+    if (Array.isArray(data.cobranzas))      cobranzas      = data.cobranzas;
+    if (Array.isArray(data.pagos))          pagos          = data.pagos;
+    if (Array.isArray(data.catClientes))    catClientes    = data.catClientes;
+    if (Array.isArray(data.catProveedores)) catProveedores = data.catProveedores;
+    if (Array.isArray(data.catServicios))   catServicios   = data.catServicios;
+    if (typeof renderViajes    === 'function') renderViajes();
+    if (typeof renderCobranza  === 'function') renderCobranza();
+    if (typeof filtrarPagos    === 'function') filtrarPagos();
+    if (typeof renderCatClientes === 'function') renderCatClientes();
+    const st = document.getElementById('fs-status');
+    if (st) st.textContent = 'Cargado: ' + (data.savedAt ? new Date(data.savedAt).toLocaleDateString('es-MX') : '—');
+  } catch(e) {
+    if (e.name !== 'NotFoundError') console.error('_cargarDesdeCarpeta:', e);
+  }
+}
+
+async function guardarAdjunto(file, viajeRef) {
+  if (!dirHandle) {
+    mostrarToastMMB('⚠️ Conecta una carpeta local para guardar adjuntos');
+    return null;
+  }
+  try {
+    const adjDir = await dirHandle.getDirectoryHandle('adjuntos', { create: true });
+    const safe   = (viajeRef || 'sin-ref').replace(/[^a-zA-Z0-9_\-]/g, '_');
+    const vDir   = await adjDir.getDirectoryHandle(safe, { create: true });
+    const fh     = await vDir.getFileHandle(file.name, { create: true });
+    const w      = await fh.createWritable();
+    await w.write(file);
+    await w.close();
+    mostrarToastMMB('📎 Adjunto guardado: ' + file.name);
+    return 'adjuntos/' + safe + '/' + file.name;
+  } catch(e) { console.error('guardarAdjunto:', e); return null; }
+}
+
+function _actualizarBtnCarpeta() {
+  const btn = document.getElementById('btn-carpeta');
+  const st  = document.getElementById('fs-status');
+  if (btn && dirHandle) {
+    btn.textContent = '📁 ' + dirHandle.name;
+    btn.style.background = '#e8f5e9';
+    btn.style.color = '#2e7d32';
+    btn.style.borderColor = '#a5d6a7';
+    btn.onclick = seleccionarCarpeta;
+  }
+  if (st && !st.textContent) st.textContent = 'Conectado';
+}
+
+function mostrarToastMMB(msg, tipo) {
+  const t = document.createElement('div');
+  t.textContent = msg;
+  const bg = tipo==='error' ? '#c62828' : tipo==='warn' ? '#e65100' : '#1B5E20';
+  t.style.cssText = 'position:fixed;bottom:24px;right:24px;background:'+bg+';color:#fff;padding:10px 18px;border-radius:9px;font-size:13px;font-weight:500;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,.2)';
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// Auto-guardar en carpeta después de cada cambio
+function _patchGuardar() {
+  ['guardarEditViaje','guardarEditCobranza','guardarEditProv','guardarEditCli',
+   'guardarEditSvc','saveCatClientes','saveCatProveedores','saveCatServicios'].forEach(fn => {
+    if (typeof window[fn] === 'function') {
+      const orig = window[fn];
+      window[fn] = async function(...args) {
+        const r = await orig.apply(this, args);
+        setTimeout(_guardarEnCarpeta, 900);
+        return r;
+      };
+    }
+  });
+}
+
+// ════════════════════════════════════════════════════════
+// CARTA DE INSTRUCCIONES
+// ════════════════════════════════════════════════════════
+let cartasGuardadas = [];
+
+function nuevaCarta(viajeRef) {
+  ['ci-pedimento','ci-ref','ci-contenedor','ci-descripcion','ci-pais-origen',
+   'ci-peso','ci-instrucciones','ci-destinatario','ci-rfc-dest','ci-domicilio',
+   'ci-cfdi','ci-email-fact','ci-notas'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  if (viajeRef) {
+    const v = (typeof viajes !== 'undefined' ? viajes : []).find(x => x.referencia===viajeRef || String(x.id)===String(viajeRef));
+    if (v) {
+      const sv = (id,val) => { const el=document.getElementById(id); if(el&&val) el.value=val; };
+      sv('ci-ref', v.referencia); sv('ci-contenedor', v.contenedor||v.bl||'');
+      sv('ci-descripcion', v.descripcion||v.producto||'');
+    }
+  }
+  _poblarSelectsCarta();
+  document.getElementById('carta-overlay').classList.add('show');
+}
+
+function _poblarSelectsCarta() {
+  const selPat = document.getElementById('ci-patente');
+  if (selPat && typeof catProveedores !== 'undefined') {
+    const cur = selPat.value;
+    selPat.innerHTML = '<option value="">— Seleccionar —</option>';
+    catProveedores.filter(p => (p.tipo||'').toLowerCase().includes('agente')||(p.tipo||'').toLowerCase().includes('aduan')).forEach(p => {
+      const o = document.createElement('option');
+      o.value = p.patente||p.nombre;
+      o.textContent = (p.patente?p.patente+' – ':'')+( p.nombre||'');
+      selPat.appendChild(o);
+    });
+    if (cur) selPat.value = cur;
+  }
+  const selAd = document.getElementById('ci-aduana');
+  if (selAd && selAd.options.length <= 1) {
+    [['LAX','Los Angeles'],['LAR','Laredo'],['MZT','Mazatlán'],['VER','Veracruz'],
+     ['MAN','Manzanillo'],['ALT','Altamira'],['GDL','Guadalajara'],['MTY','Monterrey']].forEach(([c,n]) => {
+      const o = document.createElement('option'); o.value=c+' – '+n; o.textContent=c+' – '+n; selAd.appendChild(o);
+    });
+  }
+}
+
+function cerrarCarta() {
+  document.getElementById('carta-overlay').classList.remove('show');
+}
+
+async function guardarCartaLocal() {
+  const carta = _leerCamposCarta();
+  carta.id = Date.now(); carta.creadaEn = new Date().toISOString();
+  cartasGuardadas.unshift(carta);
+  if (dirHandle) {
+    try {
+      const cartasDir = await dirHandle.getDirectoryHandle('cartas', { create: true });
+      const nombre = 'carta_' + (carta.ref||carta.id).replace(/[^a-zA-Z0-9_-]/g,'_') + '.json';
+      const fh = await cartasDir.getFileHandle(nombre, { create: true });
+      const w = await fh.createWritable();
+      await w.write(JSON.stringify(carta, null, 2)); await w.close();
+      mostrarToastMMB('💾 Carta guardada en carpeta/cartas/');
+    } catch(e) { console.error(e); mostrarToastMMB('Error al guardar','error'); }
+  } else {
+    localStorage.setItem('mmb_cartas', JSON.stringify(cartasGuardadas));
+    mostrarToastMMB('💾 Carta guardada localmente');
+  }
+  _renderCartasLista();
+}
+
+function _leerCamposCarta() {
+  const gv = id => { const el=document.getElementById(id); return el?el.value.trim():''; };
+  return { ref:gv('ci-ref'), pedimento:gv('ci-pedimento'), patente:gv('ci-patente'),
+    aduana:gv('ci-aduana'), regimen:gv('ci-regimen'), fechaEntrega:gv('ci-fecha-entrega'),
+    contenedor:gv('ci-contenedor'), descripcion:gv('ci-descripcion'), paisOrigen:gv('ci-pais-origen'),
+    peso:gv('ci-peso'), instrucciones:gv('ci-instrucciones'), destinatario:gv('ci-destinatario'),
+    rfcDest:gv('ci-rfc-dest'), domicilio:gv('ci-domicilio'), modalidadFact:gv('ci-modalidad-fact'),
+    cfdi:gv('ci-cfdi'), metodoPago:gv('ci-metodo-pago'), emailFact:gv('ci-email-fact'), notas:gv('ci-notas') };
+}
+
+function imprimirCarta() {
+  const c = _leerCamposCarta();
+  const hoy = new Date().toLocaleDateString('es-MX',{year:'numeric',month:'long',day:'numeric'});
+  const win = window.open('','_blank','width=860,height=1100');
+  win.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<title>Carta ${c.ref||''}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;font-size:11pt;color:#1a1a18;background:#fff}
+.page{width:215.9mm;min-height:279.4mm;margin:0 auto;padding:16mm 18mm 20mm}
+.hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12pt;border-bottom:3px solid #185FA5;padding-bottom:8pt}
+.logo-txt{font-size:26pt;font-weight:900;color:#185FA5;letter-spacing:-2px}
+.hdr-sub{font-size:8pt;color:#555;margin-top:2pt}
+.hdr-right{text-align:right;font-size:8pt;color:#444;line-height:1.7}
+.titulo{text-align:center;font-size:13pt;font-weight:700;color:#185FA5;margin:8pt 0 12pt;text-transform:uppercase;letter-spacing:1px}
+.sec{margin-bottom:10pt}
+.sec-tit{font-size:8pt;font-weight:700;text-transform:uppercase;color:#185FA5;letter-spacing:.07em;border-bottom:1px solid #c9ddef;padding-bottom:3pt;margin-bottom:6pt}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:5pt}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5pt}
+.campo label{font-size:7pt;font-weight:700;text-transform:uppercase;color:#666;display:block;margin-bottom:1pt}
+.campo .v{font-size:10pt;border-bottom:1px solid #ccc;min-height:15pt;padding:1pt 0}
+.campo .v:empty::after{content:'—';color:#bbb}
+.ibox{background:#f0f5ff;border:1px solid #b0c8e8;border-radius:4pt;padding:6pt;font-size:9.5pt;min-height:36pt;white-space:pre-wrap}
+.nbox{background:#fffbe6;border:1px solid #ffe082;border-radius:4pt;padding:6pt;font-size:9pt;min-height:28pt;white-space:pre-wrap}
+.firmas{margin-top:22pt;display:grid;grid-template-columns:1fr 1fr;gap:22pt}
+.firma{text-align:center}
+.fline{border-top:1px solid #333;margin:0 8%;padding-top:3pt;font-size:7.5pt;color:#555}
+.ftr{margin-top:14pt;border-top:2px solid #185FA5;padding-top:5pt;text-align:center;font-size:7pt;color:#777}
+@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style></head><body onload="window.print()">
+<div class="page">
+  <div class="hdr">
+    <div><div class="logo-txt">MMB</div><div class="hdr-sub"><b>MMB Logistics</b> — Control Operativo</div></div>
+    <div class="hdr-right"><div><b>Fecha:</b> ${hoy}</div><div><b>Referencia:</b> ${c.ref||'—'}</div><div><b>Folio:</b> CI-${Date.now().toString().slice(-6)}</div></div>
+  </div>
+  <div class="titulo">Carta de Instrucciones al Agente Aduanal</div>
+
+  <div class="sec">
+    <div class="sec-tit">1. Datos del Pedimento</div>
+    <div class="g3">
+      <div class="campo"><label>No. Pedimento</label><div class="v">${c.pedimento}</div></div>
+      <div class="campo"><label>Patente</label><div class="v">${c.patente}</div></div>
+      <div class="campo"><label>Aduana</label><div class="v">${c.aduana}</div></div>
+      <div class="campo"><label>Régimen aduanero</label><div class="v">${c.regimen}</div></div>
+      <div class="campo"><label>Fecha estimada entrega</label><div class="v">${c.fechaEntrega}</div></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-tit">2. Mercancía</div>
+    <div class="g2">
+      <div class="campo"><label>Contenedor / BL</label><div class="v">${c.contenedor}</div></div>
+      <div class="campo"><label>País de origen</label><div class="v">${c.paisOrigen}</div></div>
+      <div class="campo"><label>Descripción</label><div class="v">${c.descripcion}</div></div>
+      <div class="campo"><label>Peso (kg)</label><div class="v">${c.peso}</div></div>
+    </div>
+    ${c.instrucciones?'<div class="campo" style="margin-top:5pt"><label>Instrucciones especiales</label><div class="ibox">'+c.instrucciones+'</div></div>':''}
+  </div>
+
+  <div class="sec">
+    <div class="sec-tit">3. Destinatario / Consignatario</div>
+    <div class="g2">
+      <div class="campo"><label>Razón social</label><div class="v">${c.destinatario}</div></div>
+      <div class="campo"><label>RFC</label><div class="v">${c.rfcDest}</div></div>
+    </div>
+    <div class="campo" style="margin-top:5pt"><label>Domicilio fiscal</label><div class="v">${c.domicilio}</div></div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-tit">4. Facturación</div>
+    <div class="g2">
+      <div class="campo"><label>Modalidad</label><div class="v">${c.modalidadFact}</div></div>
+      <div class="campo"><label>Uso CFDI</label><div class="v">${c.cfdi}</div></div>
+      <div class="campo"><label>Método de pago</label><div class="v">${c.metodoPago}</div></div>
+      <div class="campo"><label>Correo factura</label><div class="v">${c.emailFact}</div></div>
+    </div>
+  </div>
+
+  ${c.notas?'<div class="sec"><div class="sec-tit">5. Observaciones</div><div class="nbox">'+c.notas+'</div></div>':''}
+
+  <div class="firmas">
+    <div class="firma"><div style="height:38pt"></div><div class="fline">Autorizado por MMB Logistics<br><span style="font-size:7pt">Coordinador de Operaciones</span></div></div>
+    <div class="firma"><div style="height:38pt"></div><div class="fline">Recibido — Agente Aduanal<br><span style="font-size:7pt">Patente ${c.patente||'_______'}</span></div></div>
+  </div>
+  <div class="ftr">MMB Logistics | Documento confidencial | Ref: ${c.ref||'—'} | ${hoy}</div>
+</div></body></html>`);
+  win.document.close();
+}
+
+function _renderCartasLista() {
+  const cont = document.getElementById('cartas-lista');
+  if (!cont) return;
+  if (!cartasGuardadas.length) {
+    cont.innerHTML = '<p style="color:#888;font-size:13px;text-align:center;padding:2rem">No hay cartas guardadas.<br><span style="font-size:11px">Haz clic en <strong>+ Nueva carta</strong> para crear una.</span></p>';
+    return;
+  }
+  cont.innerHTML = cartasGuardadas.map((c,i) => `
+    <div style="background:#fff;border:1px solid #e0e0e0;border-radius:10px;padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:#185FA5">${c.ref||'Sin referencia'} ${c.pedimento?'— Ped: '+c.pedimento:''}</div>
+        <div style="font-size:11px;color:#888">${c.aduana||''} ${c.patente?'· Pat: '+c.patente:''} · ${c.creadaEn?new Date(c.creadaEn).toLocaleDateString('es-MX'):''}</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn-sm" onclick="_reabrirCarta(${i})">✏️</button>
+        <button class="btn-sm" onclick="_imprimirCartaGuardada(${i})" title="Imprimir">🖨</button>
+      </div>
+    </div>`).join('');
+}
+
+function _reabrirCarta(idx) {
+  const c = cartasGuardadas[idx];
+  const sv = (id,v) => { const el=document.getElementById(id); if(el&&v!=null) el.value=v; };
+  sv('ci-ref',c.ref); sv('ci-pedimento',c.pedimento); sv('ci-patente',c.patente);
+  sv('ci-aduana',c.aduana); sv('ci-regimen',c.regimen); sv('ci-fecha-entrega',c.fechaEntrega);
+  sv('ci-contenedor',c.contenedor); sv('ci-descripcion',c.descripcion);
+  sv('ci-pais-origen',c.paisOrigen); sv('ci-peso',c.peso);
+  sv('ci-instrucciones',c.instrucciones); sv('ci-destinatario',c.destinatario);
+  sv('ci-rfc-dest',c.rfcDest); sv('ci-domicilio',c.domicilio);
+  sv('ci-modalidad-fact',c.modalidadFact); sv('ci-cfdi',c.cfdi);
+  sv('ci-metodo-pago',c.metodoPago); sv('ci-email-fact',c.emailFact); sv('ci-notas',c.notas);
+  _poblarSelectsCarta();
+  document.getElementById('carta-overlay').classList.add('show');
+}
+
+function _imprimirCartaGuardada(idx) { _reabrirCarta(idx); setTimeout(imprimirCarta, 150); }
+
+window.addEventListener('load', () => {
+  setTimeout(_iniciarFS, 600);
+  setTimeout(_patchGuardar, 1800);
+  try { const r=localStorage.getItem('mmb_cartas'); if(r) cartasGuardadas=JSON.parse(r); } catch(e){}
+});
+
 </script>
+
+  <!-- ════════════════════════════════════════════
+       PESTAÑA: CARTA DE INSTRUCCIONES
+  ═══════════════════════════════════════════════ -->
+  <div id="panel-carta" class="tab-panel">
+    <div class="topbar">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 20 20" fill="none"><rect x="3" y="2" width="14" height="17" rx="2" stroke="#185FA5" stroke-width="1.4"/><path d="M6 6h8M6 9.5h8M6 13h5" stroke="#185FA5" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </div>
+        <div><div class="brand-title">Carta de instrucciones</div><div class="brand-sub">Genera e imprime cartas para el agente aduanal</div></div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-primary" onclick="nuevaCarta()">+ Nueva carta</button>
+      </div>
+    </div>
+
+    <!-- Lista de cartas guardadas -->
+    <div id="cartas-lista" style="margin-top:1rem">
+      <p style="color:#888;font-size:13px;text-align:center;padding:2rem">
+        Haz clic en <strong>"+ Nueva carta"</strong> para crear una.<br>
+        <span style="font-size:11px">Las cartas se guardan en la carpeta local conectada.</span>
+      </p>
+    </div>
+  </div>
+
+  <!-- ════ MODAL CARTA ════════════════════════════════ -->
+  <div id="carta-overlay" onclick="if(event.target===this)cerrarCarta()">
+    <div class="carta-modal">
+      <div class="carta-header">
+        <h2>📄 Carta de Instrucciones — MMB Logistics</h2>
+        <button class="carta-close" onclick="cerrarCarta()">✕</button>
+      </div>
+      <div class="carta-body">
+
+        <!-- 1. PEDIMENTO -->
+        <div class="carta-section">
+          <div class="carta-section-title">1. Pedimento</div>
+          <div class="carta-grid">
+            <div class="carta-field"><label>No. Pedimento</label>
+              <input type="text" id="ci-pedimento" placeholder="26 16 1734 6000748"></div>
+            <div class="carta-field"><label>Referencia MMB</label>
+              <input type="text" id="ci-ref" placeholder="MMB-2024-001"></div>
+            <div class="carta-field"><label>Patente</label>
+              <select id="ci-patente"><option value="">— Seleccionar —</option></select></div>
+            <div class="carta-field"><label>Aduana</label>
+              <select id="ci-aduana"><option value="">— Seleccionar —</option></select></div>
+            <div class="carta-field"><label>Régimen aduanero</label>
+              <select id="ci-regimen">
+                <option value="">— Seleccionar —</option>
+                <option value="Importación Definitiva (Art. 96 LA)">Importación Definitiva (Art. 96 LA)</option>
+                <option value="Exportación Definitiva">Exportación Definitiva</option>
+                <option value="Temporal – mismo estado (Art. 106 LA)">Temporal – mismo estado (Art. 106 LA)</option>
+                <option value="Temporal IMMEX (Art. 108 LA)">Temporal IMMEX (Art. 108 LA)</option>
+                <option value="Depósito Fiscal (Art. 119 LA)">Depósito Fiscal (Art. 119 LA)</option>
+                <option value="Tránsito Interno (Art. 127 LA)">Tránsito Interno (Art. 127 LA)</option>
+              </select></div>
+            <div class="carta-field"><label>Fecha estimada de entrega</label>
+              <input type="date" id="ci-fecha-entrega"></div>
+          </div>
+        </div>
+
+        <!-- 2. MERCANCÍA -->
+        <div class="carta-section">
+          <div class="carta-section-title">2. Mercancía</div>
+          <div class="carta-grid">
+            <div class="carta-field"><label>Contenedor / BL</label>
+              <input type="text" id="ci-contenedor" placeholder="MSCU1234567"></div>
+            <div class="carta-field"><label>Descripción</label>
+              <input type="text" id="ci-descripcion" placeholder="Descripción de la mercancía"></div>
+            <div class="carta-field"><label>País de origen</label>
+              <input type="text" id="ci-pais-origen" placeholder="China"></div>
+            <div class="carta-field"><label>Peso (kg)</label>
+              <input type="text" id="ci-peso" placeholder="1,250"></div>
+            <div class="carta-field full" style="grid-column:1/-1"><label>Instrucciones especiales</label>
+              <textarea id="ci-instrucciones" placeholder="Instrucciones adicionales para el agente aduanal..."></textarea></div>
+          </div>
+        </div>
+
+        <!-- 3. DESTINATARIO -->
+        <div class="carta-section">
+          <div class="carta-section-title">3. Destinatario / Consignatario</div>
+          <div class="carta-grid">
+            <div class="carta-field"><label>Razón social</label>
+              <input type="text" id="ci-destinatario" placeholder="Empresa S.A. de C.V."></div>
+            <div class="carta-field"><label>RFC</label>
+              <input type="text" id="ci-rfc-dest" placeholder="EMP201901AB1"></div>
+            <div class="carta-field full" style="grid-column:1/-1"><label>Domicilio fiscal</label>
+              <textarea id="ci-domicilio" placeholder="Calle, Número, Colonia, C.P., Ciudad, Estado" style="min-height:44px"></textarea></div>
+          </div>
+        </div>
+
+        <!-- 4. FACTURACIÓN -->
+        <div class="carta-section">
+          <div class="carta-section-title">4. Datos para factura</div>
+          <div class="carta-grid">
+            <div class="carta-field"><label>Modalidad</label>
+              <select id="ci-modalidad-fact" onchange="cambiarModalidadCartaMMB(this.value)">
+                <option value="propia">Factura propia del cliente</option>
+                <option value="tercero">A nombre de MMB Logistics</option>
+                <option value="na">No aplica / pedimento sin IVA</option>
+              </select></div>
+            <div class="carta-field"><label>Uso CFDI</label>
+              <input type="text" id="ci-cfdi" placeholder="G03 – Gastos en general"></div>
+            <div class="carta-field"><label>Método de pago</label>
+              <select id="ci-metodo-pago">
+                <option value="">— Seleccionar —</option>
+                <option value="PUE – Pago en una sola exhibición">PUE – Una exhibición</option>
+                <option value="PPD – Pago en parcialidades o diferido">PPD – Parcialidades</option>
+              </select></div>
+            <div class="carta-field"><label>Correo para factura</label>
+              <input type="email" id="ci-email-fact" placeholder="facturas@empresa.com"></div>
+          </div>
+        </div>
+
+        <!-- 5. NOTAS -->
+        <div class="carta-section">
+          <div class="carta-section-title">5. Observaciones</div>
+          <div class="carta-grid full">
+            <div class="carta-field"><label>Notas internas / instrucciones al agente</label>
+              <textarea id="ci-notas" placeholder="Cualquier instrucción adicional..." style="min-height:64px"></textarea></div>
+          </div>
+        </div>
+
+      </div><!-- /carta-body -->
+      <div class="carta-footer">
+        <button class="btn" onclick="cerrarCarta()">Cancelar</button>
+        <button class="btn" onclick="guardarCartaLocal()" style="background:#e8f5e9;color:#2e7d32;border-color:#a5d6a7">💾 Guardar</button>
+        <button class="btn btn-primary" onclick="imprimirCarta()">🖨 Imprimir / PDF</button>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>
