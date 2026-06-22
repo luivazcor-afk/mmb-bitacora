@@ -4280,8 +4280,8 @@ function getMailBtnLabel(cobId) {
 let catClientes    = JSON.parse(localStorage.getItem('mmb_cat_clientes') || '[]');
 let catProveedores = JSON.parse(localStorage.getItem('mmb_cat_proveedores') || '[]');
 
-function saveCatClientes()    { localStorage.setItem('mmb_cat_clientes', JSON.stringify(catClientes)); }
-function saveCatProveedores() { localStorage.setItem('mmb_cat_proveedores', JSON.stringify(catProveedores)); }
+function saveCatClientes()    { localStorage.setItem('mmb_cat_clientes', JSON.stringify(catClientes)); _guardarEnCarpeta(); }
+function saveCatProveedores() { localStorage.setItem('mmb_cat_proveedores', JSON.stringify(catProveedores)); _guardarEnCarpeta(); }
 
 function cambiarCatTab(id, btn) {
   document.querySelectorAll('.cat-panel').forEach(function(p) {
@@ -4524,7 +4524,7 @@ function cargarCatalogos(data) {
 // ── CATÁLOGO SERVICIOS ───────────────────────────────
 let catServicios = JSON.parse(localStorage.getItem('mmb_cat_servicios') || '[]');
 
-function saveCatServicios() { localStorage.setItem('mmb_cat_servicios', JSON.stringify(catServicios)); }
+function saveCatServicios() { localStorage.setItem('mmb_cat_servicios', JSON.stringify(catServicios)); _guardarEnCarpeta(); }
 
 async function agregarServicio() {
   const nombre = document.getElementById('cat-svc-nombre').value.trim().toUpperCase();
