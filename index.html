@@ -5,11 +5,35 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/png" href="https://luivazcor-afk.github.io/mmb-bitacora/MMB_LOBO.png">
 <title>Bitácora MMB Logistics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:system-ui,-apple-system,sans-serif;background:#f5f5f3;color:#1a1a18;min-height:100vh}
+:root{
+  --bg:#F4F5F7;--surface:#fff;--surface2:#F7F8FA;
+  --bd:#E4E6EA;--bd2:#ECEDF0;--bd3:#DDE0E6;--div:#EEF0F4;--track:#EBECEf;
+  --t1:#161A1F;--t2:#3A4049;--t3:#717A87;--t4:#8A909A;--t5:#A8AEB6;
+  --brand:#185FA5;--brand2:#2672B8;--brand3:#4A8FCC;--brand4:#75AEDC;
+  --brandsoft:#E6F0FA;--brandsofttx:#185FA5;--brandhov:#115090;--railhov:#F0F4F8;
+  --pos:#1C875A;--neg:#C0453B;--warn:#B5810E;
+  --negbg:#FBEAE8;--negbd:#F2D9D6;--warnbg:#FBF2DD;--costbar:#B8CCE0;
+}
+html[data-theme=dark]{
+  --bg:#13161B;--surface:#1B1F27;--surface2:#22262F;
+  --bd:#2A2E38;--bd2:#2A2E38;--bd3:#323742;--div:#242830;--track:#272B34;
+  --t1:#E6E8EC;--t2:#BFC4CC;--t3:#97A0AA;--t4:#848C96;--t5:#686F78;
+  --brand:#4A8FCC;--brand2:#2672B8;--brand3:#5C9ED8;--brand4:#6AACE0;
+  --brandsoft:#1E2E42;--brandsofttx:#7ABAEA;--brandhov:#5599D6;--railhov:#20242C;
+  --pos:#45B889;--neg:#E8857B;--warn:#D9A93A;
+  --negbg:#36211F;--negbd:#4A2B28;--warnbg:#352E1C;--costbar:#3A4560;
+}
+body{font-family:'IBM Plex Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased;background:var(--bg);color:var(--t1);min-height:100vh;animation:pageIn .32s cubic-bezier(.22,.61,.36,1)}
+body.page-leaving{opacity:0!important;transform:translateY(-8px);transition:opacity .24s ease,transform .24s ease;animation:none}
+@keyframes pageIn{from{transform:translateY(10px);opacity:.7}to{transform:translateY(0);opacity:1}}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
 .app{max-width:1140px;margin:0 auto;padding:1.25rem}
 
 /* MEMBRETE */
@@ -568,6 +592,25 @@ tbody td{padding:9px 12px;vertical-align:middle}
   .carta-modal,.carta-header,.carta-close,.carta-footer{display:none!important}
 }
 
+
+/* ══ CONFIG EMPRESA MMB ══════════════════════════════════ */
+#cfg-mmb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center}
+#cfg-mmb-overlay.show{display:flex}
+.cfg-mmb-modal{background:var(--surface);border-radius:14px;width:min(660px,96vw);max-height:88vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.22);display:flex;flex-direction:column}
+.cfg-mmb-header{display:flex;align-items:center;justify-content:space-between;padding:18px 24px 14px;border-bottom:1px solid var(--bd);flex-shrink:0}
+.cfg-mmb-header h3{font-size:14px;font-weight:600;color:var(--t1);margin:0}
+.cfg-mmb-close{background:transparent;border:none;font-size:18px;color:var(--t3);cursor:pointer;line-height:1;padding:2px 6px;border-radius:6px}
+.cfg-mmb-close:hover{background:var(--surface2)}
+.cfg-mmb-body{padding:20px 24px;flex:1;overflow-y:auto}
+.cfg-mmb-section{margin-bottom:18px}
+.cfg-mmb-section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--brand);margin-bottom:10px;padding-bottom:5px;border-bottom:1px solid var(--bd)}
+.cfg-mmb-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cfg-mmb-field{display:flex;flex-direction:column;gap:4px}
+.cfg-mmb-field label{font-size:11px;color:var(--t3)}
+.cfg-mmb-field input{height:34px;border:1px solid var(--bd3);border-radius:7px;padding:0 10px;font-size:13px;background:var(--surface2);color:var(--t1);font-family:inherit;outline:none}
+.cfg-mmb-field input:focus{border-color:var(--brand);background:var(--surface)}
+.cfg-mmb-footer{padding:14px 24px 18px;border-top:1px solid var(--bd);display:flex;justify-content:flex-end;gap:10px;flex-shrink:0}
+
 </style>
 <!-- OAuth2 implicit flow — no external library needed -->
 </head>
@@ -630,15 +673,17 @@ tbody td{padding:9px 12px;vertical-align:middle}
     <img src="https://luivazcor-afk.github.io/mmb-bitacora/MMB_LOGO.png" alt="VAZSE"
       onerror="this.style.display='none';document.getElementById('logo-txt').style.display='block'">
     <span id="logo-txt" style="display:none;font-size:18px;font-weight:500;color:#185FA5">MMB</span>
-    <div style="display:flex;align-items:center;gap:12px">
-    <div style="text-align:right">
-      <button id="btn-carpeta" onclick="seleccionarCarpeta()" title="Conectar carpeta local para guardar datos">📁 Carpeta local</button>
-      <div id="fs-status"></div>
-    </div>
-    <div class="membrete-right">
-      <div class="membrete-title">MMB Logistics</div>
-      <div class="membrete-sub">MMB Logistics — Control operativo</div>
-    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="text-align:right">
+        <button id="btn-carpeta" onclick="seleccionarCarpeta()" title="Conectar carpeta local para guardar datos">📁 Carpeta local</button>
+        <div id="fs-status" style="font-size:10px;color:var(--t3);margin-top:2px"></div>
+      </div>
+      <div title="Cambiar tema" onclick="toggleTheme()" id="btn-theme" style="display:flex;align-items:center;justify-content:center;width:36px;height:36px;font-size:15px;color:var(--t2);border:1px solid var(--bd3);border-radius:8px;cursor:pointer;user-select:none;background:var(--surface);flex-shrink:0">🌙</div>
+      <button onclick="abrirConfigMMB()" title="Configuración de empresa" style="display:flex;align-items:center;justify-content:center;width:36px;height:36px;font-size:16px;border:1px solid var(--bd3);border-radius:8px;cursor:pointer;background:var(--surface);color:var(--t2);flex-shrink:0">⚙</button>
+      <div class="membrete-right">
+        <div class="membrete-title">MMB Logistics</div>
+        <div class="membrete-sub">Control operativo</div>
+      </div>
     </div>
   </div>
 
@@ -1233,7 +1278,7 @@ tbody td{padding:9px 12px;vertical-align:middle}
         <div><div class="brand-title">Historial de cambios</div></div>
       </div>
       <div class="btns">
-        <button class="btn btn-danger" onclick="if(confirm('¿Limpiar historial?')){historial=[];renderHistorial();localStorage.setItem('vazse_historial','[]');}">🗑 Limpiar</button>
+        <button class="btn btn-danger" onclick="if(confirm('¿Limpiar historial?')){historial=[];renderHistorial();localStorage.setItem('mmb_historial','[]');}">🗑 Limpiar</button>
       </div>
     </div>
     <div class="table-outer">
@@ -1890,7 +1935,7 @@ function postToScript(payload) {
 
 // ── sendPost — use fetch with no-cors, fallback to beacon ────────
 // ── OFFLINE QUEUE ────────────────────────────────────
-const COLA_KEY = 'vazse_cola_sync';
+const COLA_KEY = 'mmb_cola_sync';
 
 function getCola() {
   try { return JSON.parse(localStorage.getItem(COLA_KEY) || '[]'); } catch(e) { return []; }
@@ -2221,7 +2266,7 @@ function fmtFecha(f) {
 }
 
 // ── CARGA DATOS ───────────────────────────────────────
-const CACHE_KEY = 'vazse_cache_datos';
+const CACHE_KEY = 'mmb_cache_datos';
 
 function guardarCache(data) {
   try {
@@ -2654,7 +2699,7 @@ function exportarViajes() {
   const ws = XLSX.utils.aoa_to_sheet([headers,...filas,[],['','','','','','TOTALES',tk,tc,tc-tk,'','']]);
   ws['!cols']=[{wch:12},{wch:11},{wch:20},{wch:14},{wch:18},{wch:18},{wch:12},{wch:12},{wch:12},{wch:18},{wch:28}];
   XLSX.utils.book_append_sheet(wb,ws,'Viajes');
-  XLSX.writeFile(wb,`viajes_vazse_${new Date().toISOString().split('T')[0]}.xlsx`);
+  XLSX.writeFile(wb,`viajes_mmb_${new Date().toISOString().split('T')[0]}.xlsx`);
 }
 
 // ══════════════════════════════════════════════════════
@@ -3432,7 +3477,7 @@ function exportarPDFViajes() {
 
 
 // ── HISTORIAL ────────────────────────────────────────
-let historial = JSON.parse(localStorage.getItem('vazse_historial') || '[]');
+let historial = JSON.parse(localStorage.getItem('mmb_historial') || '[]');
 
 function registrarHistorial(accion, tipo, detalle) {
   const entry = {
@@ -3442,7 +3487,7 @@ function registrarHistorial(accion, tipo, detalle) {
   };
   historial.unshift(entry);
   if (historial.length > 200) historial = historial.slice(0, 200);
-  localStorage.setItem('vazse_historial', JSON.stringify(historial));
+  localStorage.setItem('mmb_historial', JSON.stringify(historial));
   renderHistorial();
 }
 
@@ -3669,14 +3714,14 @@ function autorizarDriveYVolver() {
     maniobrasDesc: document.getElementById('v-maniobras-desc').value,
     maniobrasCobrdo: document.getElementById('v-maniobras-cobrado') ? document.getElementById('v-maniobras-cobrado').value : '',
   };
-  sessionStorage.setItem('vazse_form_backup', JSON.stringify(formData));
-  sessionStorage.setItem('vazse_pending_eir', '1');
+  sessionStorage.setItem('mmb_form_backup', JSON.stringify(formData));
+  sessionStorage.setItem('mmb_pending_eir', '1');
   solicitarToken();
 }
 
 function restaurarFormularioSiHayBackup() {
-  const backup = sessionStorage.getItem('vazse_form_backup');
-  const pendingEir = sessionStorage.getItem('vazse_pending_eir');
+  const backup = sessionStorage.getItem('mmb_form_backup');
+  const pendingEir = sessionStorage.getItem('mmb_pending_eir');
   if (!backup) return;
   try {
     const d = JSON.parse(backup);
@@ -3696,9 +3741,9 @@ function restaurarFormularioSiHayBackup() {
     if (d.maniobras) document.getElementById('v-maniobras-costo').value = d.maniobras;
     if (d.maniobrasCobrdo) { const el=document.getElementById('v-maniobras-cobrado'); if(el) el.value=d.maniobrasCobrdo; }
     if (d.maniobrasDesc) document.getElementById('v-maniobras-desc').value = d.maniobrasDesc;
-    sessionStorage.removeItem('vazse_form_backup');
+    sessionStorage.removeItem('mmb_form_backup');
     if (pendingEir) {
-      sessionStorage.removeItem('vazse_pending_eir');
+      sessionStorage.removeItem('mmb_pending_eir');
       // Token recién autorizado — abrir selector de EIR
       setTimeout(() => {
         toast('Drive autorizado ✓ — ahora selecciona el EIR', 'ok');
@@ -4198,7 +4243,7 @@ function solicitarFactura(cobId) {
   const cc       = encodeURIComponent('admin@mmblogistics.com');
 
   // Mark as sent in localStorage
-  const sentKey = 'vazse_mail_sent_' + cobId;
+  const sentKey = 'mmb_mail_sent_' + cobId;
   const sentData = { ts: Date.now(), fecha: new Date().toLocaleDateString('es-MX'), state: 'enviado' };
   localStorage.setItem(sentKey, JSON.stringify(sentData));
 
@@ -4210,7 +4255,7 @@ function solicitarFactura(cobId) {
 
 function getMailBtnStyle(cobId) {
   try {
-    const raw = localStorage.getItem('vazse_mail_sent_' + cobId);
+    const raw = localStorage.getItem('mmb_mail_sent_' + cobId);
     if (raw) return 'background:#FAEEDA;color:#633806;border-color:#FAC775';
   } catch(e) {}
   return 'background:#EAF3DE;color:#27500A;border-color:#C0DD97';
@@ -4218,7 +4263,7 @@ function getMailBtnStyle(cobId) {
 
 function getMailBtnLabel(cobId) {
   try {
-    const raw = localStorage.getItem('vazse_mail_sent_' + cobId);
+    const raw = localStorage.getItem('mmb_mail_sent_' + cobId);
     if (raw) {
       const d = JSON.parse(raw);
       return 'Enviado';
@@ -4232,11 +4277,11 @@ function getMailBtnLabel(cobId) {
 // ══════════════════════════════════════════════════════
 //  CATÁLOGOS
 // ══════════════════════════════════════════════════════
-let catClientes    = JSON.parse(localStorage.getItem('vazse_cat_clientes') || '[]');
-let catProveedores = JSON.parse(localStorage.getItem('vazse_cat_proveedores') || '[]');
+let catClientes    = JSON.parse(localStorage.getItem('mmb_cat_clientes') || '[]');
+let catProveedores = JSON.parse(localStorage.getItem('mmb_cat_proveedores') || '[]');
 
-function saveCatClientes()    { localStorage.setItem('vazse_cat_clientes', JSON.stringify(catClientes)); }
-function saveCatProveedores() { localStorage.setItem('vazse_cat_proveedores', JSON.stringify(catProveedores)); }
+function saveCatClientes()    { localStorage.setItem('mmb_cat_clientes', JSON.stringify(catClientes)); }
+function saveCatProveedores() { localStorage.setItem('mmb_cat_proveedores', JSON.stringify(catProveedores)); }
 
 function cambiarCatTab(id, btn) {
   document.querySelectorAll('.cat-panel').forEach(function(p) {
@@ -4477,9 +4522,9 @@ function cargarCatalogos(data) {
 
 
 // ── CATÁLOGO SERVICIOS ───────────────────────────────
-let catServicios = JSON.parse(localStorage.getItem('vazse_cat_servicios') || '[]');
+let catServicios = JSON.parse(localStorage.getItem('mmb_cat_servicios') || '[]');
 
-function saveCatServicios() { localStorage.setItem('vazse_cat_servicios', JSON.stringify(catServicios)); }
+function saveCatServicios() { localStorage.setItem('mmb_cat_servicios', JSON.stringify(catServicios)); }
 
 async function agregarServicio() {
   const nombre = document.getElementById('cat-svc-nombre').value.trim().toUpperCase();
@@ -4869,7 +4914,7 @@ function renderReporteComparativoCustom() {
 // States: 'pendiente' (green) → 'enviado' (orange) → 'recibido' (blue)
 function getMailState(cobId) {
   try {
-    const raw = localStorage.getItem('vazse_mail_sent_' + cobId);
+    const raw = localStorage.getItem('mmb_mail_sent_' + cobId);
     if (!raw) return 'pendiente';
     const d = JSON.parse(raw);
     return d.state || 'enviado'; // legacy entries = enviado
@@ -4906,18 +4951,18 @@ function avanzarEstadoMail(cobId) {
   }
   if (state === 'enviado') {
     // Mark as received
-    const raw = localStorage.getItem('vazse_mail_sent_' + cobId);
+    const raw = localStorage.getItem('mmb_mail_sent_' + cobId);
     const d = raw ? JSON.parse(raw) : {};
     d.state = 'recibido';
     d.fechaRecibido = new Date().toLocaleDateString('es-MX');
-    localStorage.setItem('vazse_mail_sent_' + cobId, JSON.stringify(d));
+    localStorage.setItem('mmb_mail_sent_' + cobId, JSON.stringify(d));
     actualizarBtnMail(cobId);
     toast('Factura marcada como recibida ✓', 'ok');
     return;
   }
   if (state === 'recibido') {
     // Reset
-    localStorage.removeItem('vazse_mail_sent_' + cobId);
+    localStorage.removeItem('mmb_mail_sent_' + cobId);
     actualizarBtnMail(cobId);
     toast('Estado de factura reiniciado', 'inf');
   }
@@ -5377,7 +5422,7 @@ function hacerLogin() {
   const pass = document.getElementById('login-pass').value;
   const err  = document.getElementById('login-error');
   if (user === _CREDS.user && pass === _CREDS.pass) {
-    localStorage.setItem('vazse_auth', btoa(user + ':' + Date.now()));
+    localStorage.setItem('mmb_auth', btoa(user + ':' + Date.now()));
     document.getElementById('login-screen').style.display = 'none';
     err.classList.remove('show');
     cargar();
@@ -5389,12 +5434,12 @@ function hacerLogin() {
 }
 
 function cerrarSesion() {
-  localStorage.removeItem('vazse_auth');
+  localStorage.removeItem('mmb_auth');
   location.reload();
 }
 
 function verificarAuth() {
-  const auth = localStorage.getItem('vazse_auth');
+  const auth = localStorage.getItem('mmb_auth');
   if (!auth) {
     document.getElementById('login-screen').style.display = 'flex';
     return false;
@@ -5776,7 +5821,106 @@ body{font-family:Arial,sans-serif;font-size:11pt;color:#1a1a18;background:#fff}
     <div class="firma"><div style="height:38pt"></div><div class="fline">Recibido — Agente Aduanal<br><span style="font-size:7pt">Patente ${c.patente||'_______'}</span></div></div>
   </div>
   <div class="ftr">MMB Logistics | Documento confidencial | Ref: ${c.ref||'—'} | ${hoy}</div>
-</div></body></html>`);
+</div>
+<!-- ══ MODAL CONFIG EMPRESA MMB ══════════════════════════ -->
+<div id="cfg-mmb-overlay" onclick="if(event.target===this)cerrarConfigMMB()">
+  <div class="cfg-mmb-modal">
+    <div class="cfg-mmb-header">
+      <h3>⚙ Configuración de empresa — MMB Logistics</h3>
+      <button class="cfg-mmb-close" onclick="cerrarConfigMMB()">✕</button>
+    </div>
+    <div class="cfg-mmb-body">
+
+      <!-- DATOS FISCALES -->
+      <div class="cfg-mmb-section">
+        <div class="cfg-mmb-section-title">🏢 Datos fiscales</div>
+        <div class="cfg-mmb-grid">
+          <div class="cfg-mmb-field" style="grid-column:1/-1">
+            <label>Razón social</label>
+            <input id="mmb-cfg-razon" type="text" placeholder="MMB Logistics S.A. de C.V.">
+          </div>
+          <div class="cfg-mmb-field">
+            <label>RFC</label>
+            <input id="mmb-cfg-rfc" type="text" placeholder="MLO201901AB1">
+          </div>
+          <div class="cfg-mmb-field">
+            <label>Régimen fiscal</label>
+            <input id="mmb-cfg-regimen" type="text" placeholder="601 – General de Ley">
+          </div>
+          <div class="cfg-mmb-field">
+            <label>Uso CFDI por defecto</label>
+            <input id="mmb-cfg-cfdi" type="text" placeholder="G03 – Gastos en general">
+          </div>
+          <div class="cfg-mmb-field">
+            <label>Método de pago por defecto</label>
+            <input id="mmb-cfg-metodo-pago" type="text" placeholder="PUE">
+          </div>
+          <div class="cfg-mmb-field" style="grid-column:1/-1">
+            <label>Dirección fiscal</label>
+            <input id="mmb-cfg-direccion" type="text" placeholder="Calle, Número, Colonia, C.P., Ciudad">
+          </div>
+        </div>
+      </div>
+
+      <!-- OPERACIONES -->
+      <div class="cfg-mmb-section">
+        <div class="cfg-mmb-section-title">🏛 Operaciones / Agencia</div>
+        <div class="cfg-mmb-grid">
+          <div class="cfg-mmb-field">
+            <label>Teléfono operativo</label>
+            <input id="mmb-cfg-tel" type="text" placeholder="+52 (33) 000-0000">
+          </div>
+          <!-- Patentes -->
+          <div style="grid-column:1/-1;display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <label style="font-size:11px;color:var(--t3)">Patentes aduanales</label>
+              <button onclick="mmbAgregarPatente()" style="font-size:11px;padding:3px 10px;border:1px solid var(--bd3);border-radius:6px;background:transparent;color:var(--brand);cursor:pointer">+ Agregar</button>
+            </div>
+            <div id="mmb-cfg-patentes-list" style="display:flex;flex-direction:column;gap:6px"></div>
+          </div>
+          <!-- Aduanas -->
+          <div style="grid-column:1/-1;display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <label style="font-size:11px;color:var(--t3)">Aduanas</label>
+              <button onclick="mmbAgregarAduana()" style="font-size:11px;padding:3px 10px;border:1px solid var(--bd3);border-radius:6px;background:transparent;color:var(--brand);cursor:pointer">+ Agregar</button>
+            </div>
+            <div id="mmb-cfg-aduanas-list" style="display:flex;flex-direction:column;gap:6px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CORREOS -->
+      <div class="cfg-mmb-section">
+        <div class="cfg-mmb-section-title">📧 Correos de contacto</div>
+        <div class="cfg-mmb-grid">
+          <div class="cfg-mmb-field">
+            <label>Cobranza</label>
+            <input id="mmb-cfg-email-cobranza" type="email" placeholder="cobranza@mmb.com">
+          </div>
+          <div class="cfg-mmb-field">
+            <label>Operaciones</label>
+            <input id="mmb-cfg-email-ops" type="email" placeholder="ops@mmb.com">
+          </div>
+          <div class="cfg-mmb-field">
+            <label>Correo para recibir facturas</label>
+            <input id="mmb-cfg-email-facturas" type="email" placeholder="facturas@mmb.com">
+          </div>
+          <div class="cfg-mmb-field">
+            <label>Correo gerencia</label>
+            <input id="mmb-cfg-email-gerencia" type="email" placeholder="gerencia@mmb.com">
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <div class="cfg-mmb-footer">
+      <button onclick="cerrarConfigMMB()" style="padding:8px 18px;border:1px solid var(--bd3);border-radius:8px;background:transparent;color:var(--t2);font-size:13px;cursor:pointer">Cancelar</button>
+      <button onclick="guardarConfigMMB()" style="padding:8px 20px;border:none;border-radius:8px;background:var(--brand);color:#fff;font-size:13px;font-weight:600;cursor:pointer">Guardar</button>
+    </div>
+  </div>
+</div>
+
+</body></html>`);
   win.document.close();
 }
 
@@ -5823,6 +5967,130 @@ window.addEventListener('load', () => {
   try { const r=localStorage.getItem('mmb_cartas'); if(r) cartasGuardadas=JSON.parse(r); } catch(e){}
 });
 
+
+/* ══ TEMA DARK/LIGHT ══════════════════════════════════════════════════════ */
+function toggleTheme(){
+  var cur = document.documentElement.getAttribute('data-theme');
+  var next = cur === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('mmb_theme', next);
+  var btn = document.getElementById('btn-theme');
+  if(btn) btn.textContent = next === 'dark' ? '☀️' : '🌙';
+}
+
+function _initTheme(){
+  var saved = localStorage.getItem('mmb_theme') || 'light';
+  document.documentElement.setAttribute('data-theme', saved);
+  var btn = document.getElementById('btn-theme');
+  if(btn) btn.textContent = saved === 'dark' ? '☀️' : '🌙';
+}
+
+/* ══ CONFIG EMPRESA MMB ══════════════════════════════════════════════════= */
+var MMB_CFG_KEY = 'mmb_empresa_cfg';
+
+function abrirConfigMMB(){
+  cargarConfigMMB();
+  var el = document.getElementById('cfg-mmb-overlay');
+  if(el){ el.classList.add('show'); }
+}
+
+function cerrarConfigMMB(){
+  var el = document.getElementById('cfg-mmb-overlay');
+  if(el){ el.classList.remove('show'); }
+}
+
+function cargarConfigMMB(){
+  try{
+    var raw = localStorage.getItem(MMB_CFG_KEY);
+    var cfg = raw ? JSON.parse(raw) : {};
+    var campos = ['razon','rfc','regimen','cfdi','direccion','metodo-pago','tel',
+                  'email-cobranza','email-ops','email-facturas','email-gerencia'];
+    campos.forEach(function(k){
+      var el = document.getElementById('mmb-cfg-'+k);
+      if(el) el.value = cfg[k] || '';
+    });
+    // patentes
+    var pList = document.getElementById('mmb-cfg-patentes-list');
+    if(pList){ pList.innerHTML=''; }
+    (cfg.patentes||[]).forEach(function(p){ mmbAgregarPatente(p); });
+    // aduanas
+    var aList = document.getElementById('mmb-cfg-aduanas-list');
+    if(aList){ aList.innerHTML=''; }
+    (cfg.aduanas||[]).forEach(function(a){ mmbAgregarAduana(a); });
+  }catch(e){}
+}
+
+function guardarConfigMMB(){
+  var campos = ['razon','rfc','regimen','cfdi','direccion','metodo-pago','tel',
+                'email-cobranza','email-ops','email-facturas','email-gerencia'];
+  var cfg = {};
+  campos.forEach(function(k){
+    var el = document.getElementById('mmb-cfg-'+k);
+    cfg[k] = el ? el.value.trim() : '';
+  });
+  cfg.patentes = mmbGetCfgLista('patentes');
+  cfg.aduanas  = mmbGetCfgLista('aduanas');
+  localStorage.setItem(MMB_CFG_KEY, JSON.stringify(cfg));
+  // Si hay carpeta conectada, guardar también en data.json
+  if(typeof _guardarEnCarpeta === 'function'){ _guardarEnCarpeta(); }
+  cerrarConfigMMB();
+  mostrarToastMMB('✓ Configuración guardada');
+}
+
+function mmbAgregarPatente(data){
+  data = data || {};
+  var list = document.getElementById('mmb-cfg-patentes-list');
+  if(!list) return;
+  var row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:6px;align-items:center';
+  row.innerHTML =
+    '<input type="text" placeholder="Patente (ej. 3189)" value="'+
+      (data.patente||'').replace(/"/g,'&quot;')+
+    '" style="width:110px;height:30px;border:1px solid var(--bd3);border-radius:6px;padding:0 8px;font-size:12px;background:var(--surface2);color:var(--t1);font-family:inherit">'+
+    '<input type="text" placeholder="Nombre de la agencia (opcional)" value="'+
+      (data.agencia||'').replace(/"/g,'&quot;')+
+    '" style="flex:1;height:30px;border:1px solid var(--bd3);border-radius:6px;padding:0 8px;font-size:12px;background:var(--surface2);color:var(--t1);font-family:inherit">'+
+    '<button onclick="this.closest('div').remove()" style="padding:4px 10px;border:1px solid var(--negbd);border-radius:6px;background:var(--negbg);color:var(--neg);font-size:11px;cursor:pointer;flex-shrink:0">✕</button>';
+  list.appendChild(row);
+}
+
+function mmbAgregarAduana(data){
+  data = data || {};
+  var list = document.getElementById('mmb-cfg-aduanas-list');
+  if(!list) return;
+  var row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:6px;align-items:center';
+  row.innerHTML =
+    '<input type="text" placeholder="Clave (ej. 640)" value="'+
+      (data.clave||'').replace(/"/g,'&quot;')+
+    '" style="width:90px;height:30px;border:1px solid var(--bd3);border-radius:6px;padding:0 8px;font-size:12px;background:var(--surface2);color:var(--t1);font-family:inherit">'+
+    '<input type="text" placeholder="Ciudad / Aduana" value="'+
+      (data.nombre||'').replace(/"/g,'&quot;')+
+    '" style="flex:1;height:30px;border:1px solid var(--bd3);border-radius:6px;padding:0 8px;font-size:12px;background:var(--surface2);color:var(--t1);font-family:inherit">'+
+    '<button onclick="this.closest('div').remove()" style="padding:4px 10px;border:1px solid var(--negbd);border-radius:6px;background:var(--negbg);color:var(--neg);font-size:11px;cursor:pointer;flex-shrink:0">✕</button>';
+  list.appendChild(row);
+}
+
+function mmbGetCfgLista(tipo){
+  var list = document.getElementById('mmb-cfg-'+tipo+'-list');
+  if(!list) return [];
+  var rows = list.querySelectorAll('div');
+  return Array.from(rows).map(function(row){
+    var inputs = row.querySelectorAll('input');
+    if(tipo==='patentes')
+      return { patente:(inputs[0]||{}).value||'', agencia:(inputs[1]||{}).value||'' };
+    else
+      return { clave:(inputs[0]||{}).value||'', nombre:(inputs[1]||{}).value||'' };
+  }).filter(function(x){
+    return tipo==='patentes' ? x.patente : x.clave;
+  });
+}
+
+/* ══ INIT TEMA AL CARGAR ════════════════════════════════════════════════= */
+document.addEventListener('DOMContentLoaded', function(){
+  _initTheme();
+});
+
 </script>
 
   <!-- ════════════════════════════════════════════
@@ -5834,7 +6102,7 @@ window.addEventListener('load', () => {
         <div class="brand-icon">
           <svg viewBox="0 0 20 20" fill="none"><rect x="3" y="2" width="14" height="17" rx="2" stroke="#185FA5" stroke-width="1.4"/><path d="M6 6h8M6 9.5h8M6 13h5" stroke="#185FA5" stroke-width="1.4" stroke-linecap="round"/></svg>
         </div>
-        <div><div class="brand-title">Carta de instrucciones</div><div class="brand-sub">Genera e imprime cartas para el agente aduanal</div></div>
+        <div><div class="brand-title">Carta de instrucciones</div><div class="brand-sub">Genera e imprime cartas para la agencia aduanal</div></div>
       </div>
       <div style="display:flex;gap:6px">
         <button class="btn btn-primary" onclick="nuevaCarta()">+ Nueva carta</button>
@@ -5899,7 +6167,7 @@ window.addEventListener('load', () => {
             <div class="carta-field"><label>Peso (kg)</label>
               <input type="text" id="ci-peso" placeholder="1,250"></div>
             <div class="carta-field full" style="grid-column:1/-1"><label>Instrucciones especiales</label>
-              <textarea id="ci-instrucciones" placeholder="Instrucciones adicionales para el agente aduanal..."></textarea></div>
+              <textarea id="ci-instrucciones" placeholder="Instrucciones adicionales para la agencia aduanal..."></textarea></div>
           </div>
         </div>
 
